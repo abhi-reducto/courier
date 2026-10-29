@@ -2,6 +2,9 @@
 
 Courier sends files from your Mac to another machine and gives your coding agent the path.
 
+> [!NOTE]
+> This is a hacked-together project I built for my own use. It works on my setup, but expect rough edges, and don't rely on it for anything important.
+
 If you run Claude Code on a remote box, you can't drag a screenshot into it, because the file is on your Mac. Drop it on Courier instead. It copies the file over SSH and pastes the path into your agent, or puts it on your clipboard.
 
 <table>
