@@ -147,9 +147,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         menu.addItem(item("Select Files…", "file-plus", #selector(selectFiles)))
         menu.addItem(item("Send Clipboard", "clipboard-paste", #selector(sendClipboard)))
         // The last file sent, its name in gray on the right.
-        let copyLast = item("Copy Last Path", "copy", #selector(copyLastPath))
+        let copyLast = item("Copy Path to Last File", "copy", #selector(copyLastPath))
         if let last = uploads.history.first {
-            copyLast.attributedTitle = twoColumn("Copy Last Path", shortName(last.name), rightColumn([("Copy Last Path", shortName(last.name))]))
+            copyLast.attributedTitle = twoColumn("Copy Path to Last File", shortName(last.name), rightColumn([("Copy Path to Last File", shortName(last.name))]))
             copyLast.toolTip = last.path
         } else {
             copyLast.isEnabled = false
