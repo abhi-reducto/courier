@@ -153,7 +153,7 @@ final class Settings: ObservableObject {
     @Published var devices: [Device] = []
 
     init() {
-        Self.migrateFromDrop()
+        Self.migrateOldSettings()
         selected = d.string(forKey: "device") ?? ""
         dirs = d.dictionary(forKey: "dirs") as? [String: String] ?? [:]
         hidden = Set(d.stringArray(forKey: "hidden") ?? [])
@@ -167,14 +167,17 @@ final class Settings: ObservableObject {
         }
     }
 
-    // Courier was called Drop and stored its settings under that app ID. Copy them over once.
-    static func migrateFromDrop() {
+    // Earlier builds stored settings under other app IDs (Courier was first called Drop).
+    // Copy them over once, newest first.
+    static func migrateOldSettings() {
         let d = UserDefaults.standard
-        guard !d.bool(forKey: "migratedFromDrop") else { return }
-        if let old = UserDefaults(suiteName: "ai.reducto.abhi.drop")?.persistentDomain(forName: "ai.reducto.abhi.drop") {
-            for (k, v) in old where d.object(forKey: k) == nil { d.set(v, forKey: k) }
+        guard !d.bool(forKey: "migratedOldSettings") else { return }
+        for oldID in ["ai.reducto.courier", "ai.reducto.abhi.drop"] {
+            for (k, v) in UserDefaults.standard.persistentDomain(forName: oldID) ?? [:] where d.object(forKey: k) == nil {
+                d.set(v, forKey: k)
+            }
         }
-        d.set(true, forKey: "migratedFromDrop")
+        d.set(true, forKey: "migratedOldSettings")
     }
 
     func dir(for device: String) -> String { dirs[device] ?? defaultDir }

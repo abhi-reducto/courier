@@ -1,19 +1,25 @@
-# Courier
+# <img src="docs/icon.png" width="44" align="absmiddle" alt=""> Courier
 
 Send files from your Mac to any machine on your Tailscale network, and have the path land in the coding agent you're running there.
 
-Drop a screenshot, a CSV, or a whole folder on Courier. It copies it to the folder you picked on that machine over SSH, puts the remote path on your clipboard, and, if the machine runs [Rex](#with-rex), pastes the path straight into your Claude Code, Codex, or Cursor Agent prompt.
+Drop a screenshot, a CSV, or a whole folder on Courier. It copies it to the folder you picked on that machine over SSH, puts the remote path on your clipboard, and, if the machine runs [Rex](https://docs.superlogical.com), pastes the path straight into your Claude Code, Codex, or Cursor Agent prompt.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/home-dark.png">
-    <img src="docs/screenshots/home-light.png" width="420" alt="The Courier window: a drop area, the device list with each device's folder, and recently sent files">
-  </picture>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-dark.png">
-    <img src="docs/screenshots/settings-light.png" width="420" alt="Courier settings: Dock and menu bar visibility, open at login, and which coding agents get the path pasted in">
-  </picture>
-</p>
+<table>
+  <tr>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/home-dark.png">
+        <img src="docs/screenshots/home-light.png" alt="The Courier window: a drop area, the device list with each device's folder, and recently sent files">
+      </picture>
+    </td>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-dark.png">
+        <img src="docs/screenshots/settings-light.png" alt="Courier settings: Dock and menu bar visibility, open at login, and which coding agents get the path pasted in">
+      </picture>
+    </td>
+  </tr>
+</table>
 
 ## Why
 
@@ -86,7 +92,7 @@ The selected device (accent-colored in the window, checked in the menu) is where
 
 ## With Rex
 
-Rex is a terminal multiplexer with Tailscale built in. If the machine you send to runs a Rex server, Courier pastes the file path into the terminal that's running your coding agent, so you only have to type your question.
+[Rex](https://docs.superlogical.com) is a terminal multiplexer with Tailscale built in. If the machine you send to runs a Rex server, Courier pastes the file path into the terminal that's running your coding agent, so you only have to type your question.
 
 **Setup:**
 
@@ -164,4 +170,4 @@ See [`AGENTS.md`](AGENTS.md) for the file layout, conventions, and how to check 
 
 ## Credits
 
-Interface icons are from [Lucide](https://lucide.dev) (ISC license, see `icons/LICENSE`). The menu bar tray and the app icon use Apple's SF Symbol `tray.and.arrow.down`.
+Interface icons are from [Lucide](https://lucide.dev) (ISC license, see `icons/LICENSE`). The menu bar tray uses Apple's SF Symbol `tray.and.arrow.down`, and the app icon is drawn around `shippingbox.fill`.

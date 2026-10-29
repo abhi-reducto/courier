@@ -9,7 +9,7 @@
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>ai.reducto.courier</string>
+	<string>dev.abhia.courier</string>
 	<key>CFBundleName</key>
 	<string>Courier</string>
 	<key>CFBundlePackageType</key>

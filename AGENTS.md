@@ -43,7 +43,7 @@ You likely can't take real screenshots (no screen-recording permission), so rend
 scripts/screenshots.sh
 ```
 
-It builds a copy of the app under a separate app ID (`ai.reducto.courier.screenshots`) with demo devices and history injected via `Settings.deviceSource`, and writes light/dark PNGs of the window and Settings into `docs/screenshots/`. Look at them before saying a UI change is done. Never put real device names, paths, or file names in screenshots or commits.
+It builds a copy of the app under a separate app ID (`dev.abhia.courier.screenshots`) with demo devices and history injected via `Settings.deviceSource`, and writes light/dark PNGs of the window and Settings into `docs/screenshots/`. Look at them before saying a UI change is done. Never put real device names, paths, or file names in screenshots or commits.
 
 Limits of offscreen rendering: macOS's glass/vibrancy materials draw as blank or white blobs (the toolbar button is drawn unbordered for this reason), the status item menu can't be captured, and drag-and-drop can't be simulated.
 
@@ -62,5 +62,5 @@ Limits of offscreen rendering: macOS's glass/vibrancy materials draw as blank or
 
 - Native macOS controls and one calm surface: no repeated information, no second window for settings, gray secondary text, hairline separators. Check both light and dark.
 - Comments explain why, briefly, in the style already in the files. User-facing text is short, plain, and says what to do next.
-- Settings are `@Published` properties on `Settings` persisted to `UserDefaults` in `didSet`. The app ID is `ai.reducto.courier`; `Settings.migrateFromDrop` copies settings from the old `ai.reducto.abhi.drop` ID once.
+- Settings are `@Published` properties on `Settings` persisted to `UserDefaults` in `didSet`. The app ID is `dev.abhia.courier`; `Settings.migrateOldSettings` copies settings once from the earlier IDs (`ai.reducto.courier`, `ai.reducto.abhi.drop`).
 - Icons are Lucide SVGs in `icons/` (stroke color set to `#000` so `NSImage` renders them as templates). Add new ones from the same Lucide version (`lucide-static@0.460.0`) and load them with `lucideImage`.
