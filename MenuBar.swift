@@ -146,6 +146,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         menu.removeAllItems()
         menu.addItem(item("Select Files…", "file-plus", #selector(selectFiles)))
         menu.addItem(item("Send Clipboard", "clipboard-paste", #selector(sendClipboard)))
+        // The last file sent, its name in gray on the right.
+        let copyLast = item("Copy Last Path", "copy", #selector(copyLastPath))
+        if let last = uploads.history.first {
+            copyLast.attributedTitle = twoColumn("Copy Last Path", shortName(last.name), rightColumn([("Copy Last Path", shortName(last.name))]))
+            copyLast.toolTip = last.path
+        } else {
+            copyLast.isEnabled = false
+        }
+        menu.addItem(copyLast)
         menu.addItem(.separator())
 
         menu.addItem(NSMenuItem.sectionHeader(title: "Send to"))
@@ -179,6 +188,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     }
 
     // Long folders keep their start and end: ~/.cache/claude-images -> ~/.cache/…/claude-images.
+    func shortName(_ n: String) -> String {
+        n.count > 26 ? String(n.prefix(12)) + "…" + String(n.suffix(11)) : n
+    }
+
     func shortPath(_ p: String) -> String {
         guard p.count > 24 else { return p }
         let parts = p.split(separator: "/", omittingEmptySubsequences: false)
@@ -210,6 +223,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     }
 
     @objc func selectFiles() { chooseFiles(for: settings.selected) }
+
+    // Escaped so it pastes as one argument into a shell or an agent prompt.
+    @objc func copyLastPath() {
+        guard let last = uploads.history.first else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(last.path.replacingOccurrences(of: " ", with: "\\ "), forType: .string)
+    }
 
     @objc func sendClipboard() { Uploads.shared.send(fileURLs(NSPasteboard.general).map(\.path), to: settings.selected) }
 
