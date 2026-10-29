@@ -1,0 +1,115 @@
+#!/bin/zsh
+# rimg: send files to a remote box so Claude Code (running there) can read them.
+#   rimg               -> uploads the image currently on the macOS clipboard
+#   rimg a.png dir/ x  -> uploads those files or folders (drag them onto the terminal to fill paths)
+# The remote paths are pasted into the coding agent's Rex terminal on the host (see rex-paste) and copied to the clipboard.
+set -euo pipefail
+
+HOST="${RIMG_HOST:?set RIMG_HOST to an ssh host}"          # ssh target
+REX_HOST="${RIMG_REX-$HOST}"           # rex host label to type the path into; empty to skip
+REMOTE_DIR="${RIMG_DIR:-.cache/claude-images}"  # absolute, ~/..., or relative to home
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+files=("$@")
+if (( ${#files} == 0 )); then
+  out="$tmp/Clipboard $(date '+%Y-%m-%d at %H.%M.%S').png"
+  if ! osascript -e "set f to open for access POSIX file \"$out\" with write permission" \
+                 -e 'write (the clipboard as «class PNGf») to f' \
+                 -e 'close access f' >/dev/null 2>&1; then
+    echo "rimg: nothing to send. Copy a file or an image first" >&2
+    exit 1
+  fi
+  files=("$out")
+fi
+
+# One shared ssh connection for every call below.
+ssh_opts=(-o ControlMaster=auto -o "ControlPath=$tmp/cm" -o ControlPersist=30)
+rssh() { ssh "${ssh_opts[@]}" "$HOST" "$@"; }
+
+# ssh starts in the remote home, so ~/ paths become relative ones.
+rel="$REMOTE_DIR"
+[[ "$rel" == "~" ]] && rel=.
+rel="${rel#\~/}"
+dest=$(rssh "mkdir -p -- ${(q)rel} && cd -- ${(q)rel} && pwd")
+
+total=0
+for f in "${files[@]}"; do
+  [[ -e "$f" ]] || { echo "rimg: no such file: $f" >&2; exit 1; }
+  (( total += $(find "$f" -type f -exec stat -f %z {} + | awk '{s+=$1} END {print s+0}') ))
+done
+
+# Copies stdin to stdout and reports overall percent on stderr:
+# "@progress N" lines when RIMG_PROGRESS=1 (for Drop.app), else a live "N%" on a terminal.
+meter() {
+  perl -e '
+    my ($done, $total, $mode) = @ARGV; my $last = -1; $| = 1;
+    while (my $n = sysread(STDIN, my $buf, 262144)) {
+      my $off = 0; while ($off < $n) { $off += syswrite(STDOUT, $buf, $n - $off, $off) // die "write: $!" }
+      $done += $n;
+      my $pct = $total ? int(100 * $done / $total) : 100; $pct = 100 if $pct > 100;
+      next if $pct == $last; $last = $pct;
+      print STDERR $mode eq "app" ? "\@progress $pct\n" : "\rrimg: $pct%" if $mode;
+    }
+    open(my $fh, ">", $ENV{RIMG_DONE_FILE}) or die "rimg: $!"; print $fh $done;
+  ' "$1" "$total" "$progress_mode"
+}
+progress_mode=""
+[[ "${RIMG_PROGRESS:-}" == 1 ]] && progress_mode=app
+[[ -z "$progress_mode" && -t 2 ]] && progress_mode=tty
+export RIMG_DONE_FILE="$tmp/done"
+sent=0
+
+# Remote sh snippet: claim the first free name among "stem.ext", "stem (1).ext", "stem (2).ext", ...
+# by creating it atomically (noclobber for files, mkdir for folders), write stdin into it, print the name.
+remote_put() {  # kind stem ext
+  local claim write
+  if [[ $1 == dir ]]; then
+    claim='mkdir -- "$n" 2>/dev/null'
+    write='tar -xf - --no-same-owner --strip-components=1 -C "$n"'
+  else
+    claim='(set -C; : > "$n") 2>/dev/null'
+    write='cat > "$n"'
+  fi
+  rssh "cd -- ${(q)dest} || exit 1
+stem=${(q)2}; ext=${(q)3}; n=\"\$stem\$ext\"; i=1
+until $claim; do
+  [ \$i -gt 999 ] && { echo \"rimg: can't create \$n in ${(q)dest}\" >&2; exit 1; }
+  n=\"\$stem (\$i)\$ext\"; i=\$((i+1))
+done
+$write && printf '%s' \"\$n\""
+}
+
+paths=()
+for f in "${files[@]}"; do
+  base="${f:A:t}"
+  if [[ -d "$f" ]]; then
+    name=$(COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -cf - -C "${f:A:h}" "$base" | meter $sent |
+      remote_put dir "$base" "")
+  else
+    stem="$base" ext=""
+    # Split off the extension, but not from dotfiles like ".env".
+    if [[ "${base#.}" == *.* ]]; then stem="${base%.*}" ext=".${base##*.}"; fi
+    name=$(meter $sent < "$f" | remote_put file "$stem" "$ext")
+  fi
+  sent=$(<"$RIMG_DONE_FILE")
+  paths+=("$dest/$name")
+  # Drop.app keeps a history of sent files with their sizes.
+  if [[ "$progress_mode" == app ]]; then
+    print -u2 -r -- "@sent $(find "$f" -type f -exec stat -f %z {} + | awk '{s+=$1} END {print s+0}') $dest/$name"
+  fi
+done
+[[ "$progress_mode" == tty ]] && print -u2
+
+# The files are there; Drop can show "Sent" now while the paste below finishes.
+[[ "$progress_mode" == app ]] && print -u2 "@uploaded"
+
+quoted=(${(q)paths})
+text="${(j: :)quoted} "
+if [[ -n "$REX_HOST" ]]; then
+  "${0:A:h}/rex-paste" "$REX_HOST" "$text" >/dev/null || echo "rimg: no agent terminal found in Rex; path is on your clipboard" >&2
+fi
+# After rex-paste, which may use the clipboard to ask Rex.app for its focused pane.
+print -rn -- "$text" | pbcopy
+print -rl -- "${paths[@]}"

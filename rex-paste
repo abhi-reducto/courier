@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""rex-paste [--dry-run] HOST TEXT: paste TEXT into the coding agent's terminal on a Rex host.
+
+Picks the terminal like this:
+  1. The pane Rex.app is showing, if it runs an agent. Needs Remote Control turned on
+     in Rex.app's settings (Rex Server), since Drop asks the app for its focused pane.
+  2. Otherwise, among agent terminals that are focused in their session's active window,
+     the one whose agent reported activity most recently.
+Exits 1 without pasting if no agent terminal is found.
+"""
+import json
+import os
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
+
+ALL_AGENTS = {"claude", "codex", "cursor-agent", "gemini", "opencode", "grok",
+              "aider", "amp", "devin", "goose", "copilot", "crush", "qwen"}
+# RIMG_AGENTS (comma-separated, set by Drop's settings) limits which agents count.
+AGENTS = set(filter(None, os.environ["RIMG_AGENTS"].split(","))) if "RIMG_AGENTS" in os.environ else ALL_AGENTS
+# Other names an agent's binary goes by.
+ALIASES = {"cursor-agent": {"agent"}}
+REX = "rex"
+
+
+def call(host, method, args):
+    r = subprocess.run([REX, "-S", host, "api", "call", method, json.dumps(args)],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.strip())
+    return json.loads(r.stdout or "{}")
+
+
+def is_agent(proc, status):
+    # Agents that report status to Rex name themselves, e.g. "claude-code".
+    if any((r.get("app") or "").startswith(a) for r in status.get("records", []) for a in AGENTS):
+        return True
+    fg = proc.get("foreground") or {}
+    names = {os.path.basename(fg.get(k) or "") for k in ("invoked_path", "argv0", "name")}
+    path = fg.get("path") or ""
+    wanted = AGENTS.union(*(ALIASES.get(a, set()) for a in AGENTS))
+    return bool(names & wanted) or any(f"/{a}/" in path for a in AGENTS)
+
+
+def terminals(host, pool):
+    """List (session_id, block_id, focused_in_active_window, last_activity, agent).
+
+    Each rex call is a separate network round trip, so they run in parallel: all sessions'
+    views at once, then every terminal's process and status at once."""
+    sessions = [s["session_id"] for s in call(host, "session.list", {}).get("sessions", [])]
+    views = list(pool.map(lambda sid: call(host, "session.view", {"session_id": sid}), sessions))
+    blocks = []  # (sid, bid, focused)
+    for sid, view in zip(sessions, views):
+        for w in view.get("windows", []):
+            for layer in w.get("layers", []):
+                for b in layer.get("blocks", []):
+                    if b.get("creator_name") == "com.superlogical.terminal":
+                        focused = w["window_id"] == view.get("active_window_id") and w.get("focused_block_id") == b["block_id"]
+                        blocks.append((sid, b["block_id"], focused))
+
+    def inspect(blk):
+        sid, bid, focused = blk
+        try:
+            proc = call(host, "block.method", {"session_id": sid, "block_id": bid, "method": "process"})
+            status = call(host, "block.method", {"session_id": sid, "block_id": bid, "method": "program_status"})
+        except RuntimeError:
+            return None
+        last = max((r.get("updated_at", "") for r in status.get("records", [])), default="")
+        return sid, bid, focused, last, is_agent(proc, status)
+
+    return [t for t in pool.map(inspect, blocks) if t]
+
+
+def app_focused_block(host):
+    """Ask Rex.app which pane it shows. It copies the pane ID to the Mac clipboard."""
+    try:
+        app = call(host, "target.resolve", {"kinds": ["client"], "queries": [""]})["results"][0]["target"]
+        client_id = app.get("client_id") or app["id"]
+        call(host, "client.perform", {"client_id": client_id, "action": "pane.copy_id", "timeout_ms": 2000})
+        return subprocess.run(["pbpaste"], capture_output=True, text=True).stdout.strip()
+    except (RuntimeError, KeyError, IndexError):
+        return None
+
+
+def main():
+    args = sys.argv[1:]
+    dry = args[0] == "--dry-run"
+    host, text = args[dry:][0], args[dry:][1]
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        # Asking Rex.app for its focused pane runs alongside the terminal scan.
+        focused = pool.submit(app_focused_block, host)
+        terms = terminals(host, pool)
+        focused_id = focused.result()
+    target = next((t for t in terms if t[1] == focused_id and t[4]), None)
+    if not target:
+        candidates = sorted((t for t in terms if t[2] and t[4]), key=lambda t: t[3], reverse=True)
+        target = candidates[0] if candidates else None
+    if not target:
+        print("rex-paste: no agent terminal found", file=sys.stderr)
+        sys.exit(1)
+    if dry:
+        print(target)
+        return
+    call(host, "block.event", {"session_id": target[0], "block_id": target[1],
+                               "event": {"type": "paste", "payload": {"text": text}}})
+    print(target[1])
+
+
+if __name__ == "__main__":
+    main()
