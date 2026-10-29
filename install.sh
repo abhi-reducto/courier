@@ -30,4 +30,4 @@ pkill -x Courier 2>/dev/null || true
 pkill -x Drop 2>/dev/null || true
 rm -rf "$HOME/Applications/Drop.app"
 open "$APP"
-echo "Installed $APP. Look for the tray icon in your menu bar."
+echo "Installed $APP. Look for the box icon in your menu bar."

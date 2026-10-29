@@ -10,12 +10,12 @@ final class DropView: NSView {
     weak var target: AppDelegate?
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-        target?.setIcon("tray.and.arrow.down.fill")
+        target?.setIcon("package-open")  // the box opens while a file hovers
         return .copy
     }
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { .copy }
     override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool { true }
-    override func draggingExited(_ sender: NSDraggingInfo?) { target?.setIcon("tray.and.arrow.down") }
+    override func draggingExited(_ sender: NSDraggingInfo?) { target?.setIcon("package") }
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         let urls = fileURLs(sender.draggingPasteboard)
         guard let target, !urls.isEmpty else { return false }
@@ -38,7 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
 
     func applicationDidFinishLaunching(_ n: Notification) {
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        setIcon("tray.and.arrow.down")
+        setIcon("package")
         menu.delegate = self
         item.menu = menu
         if let button = item.button {
@@ -63,7 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
             item.button?.toolTip = nil
             setIcon(r.ok ? "circle-check" : "circle-x")
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                if self.uploads.progress.isEmpty { self.setIcon("tray.and.arrow.down") }
+                if self.uploads.progress.isEmpty { self.setIcon("package") }
             }
             notify(r.message)
         }.store(in: &subs)
@@ -164,7 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         }
         menu.addItem(.separator())
 
-        menu.addItem(item("Open Courier…", "tray.and.arrow.down", #selector(openMain)))
+        menu.addItem(item("Open Courier…", "package", #selector(openMain)))
         menu.addItem(item("Settings…", "settings", #selector(openSettings)))
         let quit = item("Quit Courier", "x", #selector(NSApp.terminate(_:)))
         quit.target = NSApp

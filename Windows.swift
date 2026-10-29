@@ -93,8 +93,8 @@ struct DropSurface: View {
                     ProgressView(value: Double(pct), total: 100).frame(width: 180)
                     Text("Sending to \(device.name)… \(pct)%").foregroundStyle(Theme.muted).monospacedDigit()
                 } else {
-                    Image(systemName: targeted ? "tray.and.arrow.down.fill" : "tray.and.arrow.down")
-                        .font(.system(size: 26, weight: .light))
+                    // The box opens while files hover over it.
+                    icon(targeted ? "package-open" : "package", size: 30)
                         .foregroundStyle(targeted ? Color.accentColor : Theme.muted)
                     VStack(spacing: 3) {
                         Text("Drop files here").font(.headline)

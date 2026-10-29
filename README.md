@@ -1,15 +1,15 @@
 # <img src="docs/icon.png" width="44" align="absmiddle" alt=""> Courier
 
-Drop a file on Courier and it lands on your dev box, with its path pasted into your coding agent.
+Courier sends files from your Mac to another machine and gives your coding agent the path.
 
-When Claude Code runs on another machine, dragging a screenshot into it does nothing, because the file is on your Mac. Courier copies it over and gives the agent the path.
+If you run Claude Code on a remote box, you can't drag a screenshot into it, because the file is on your Mac. Drop it on Courier instead. It copies the file over SSH and pastes the path into your agent, or puts it on your clipboard.
 
 <table>
   <tr>
     <td width="50%">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/home-dark.png">
-        <img src="docs/screenshots/home-light.png" alt="The Courier window: a drop area, your devices with their folders, and recently sent files">
+        <img src="docs/screenshots/home-light.png" alt="The Courier window">
       </picture>
     </td>
     <td width="50%">
@@ -21,18 +21,11 @@ When Claude Code runs on another machine, dragging a screenshot into it does not
   </tr>
 </table>
 
-- Send any file or folder, or what's on your clipboard, like a screenshot.
-- Pick a folder for each machine.
-- See progress, and a list of what you've sent.
-- If the machine runs [Rex](https://docs.superlogical.com), the path is pasted straight into Claude Code, Codex, Cursor, and other agents. Otherwise it's on your clipboard.
+## Setup
 
-## What you need
+You need macOS 14 or later and [Tailscale](https://tailscale.com) on your Mac and on the machines you send to. You also need SSH access to those machines without a password. The easiest way is to run `sudo tailscale set --ssh` on each one. If `ssh <machine> true` works without asking you anything, you're set.
 
-- A Mac on macOS 14 or later, with Apple's command line tools (`xcode-select --install`).
-- [Tailscale](https://tailscale.com) on your Mac and the machines you send to.
-- SSH to those machines without a password. The easy way: run `sudo tailscale set --ssh` on each one. To check, `ssh <machine> true` should work without asking anything.
-
-## Install
+Then build and install:
 
 ```sh
 git clone https://github.com/abhi-reducto/courier.git
@@ -40,42 +33,20 @@ cd courier
 ./install.sh
 ```
 
-Courier shows up in your menu bar. Run `./install.sh` again after pulling updates.
+A box icon appears in your menu bar. You can also ask Claude Code or Codex to clone the repo, read `AGENTS.md`, and run `./install.sh` for you.
 
-**Or ask a coding agent to do it.** Paste this into Claude Code or Codex:
+## Use
 
-> Clone github.com/abhi-reducto/courier, read AGENTS.md, and run ./install.sh. If something fails, fix it and tell me what you changed. Then check that `ssh <my machine> true` works.
+Drag files onto the menu bar icon or into the Courier window. To send a screenshot, copy it with ⌘⇧⌃4 and choose Send Clipboard. Click a machine in the window to send there, and click its folder to change where files go.
 
-## Using it
+When a file arrives, its path is copied to your clipboard.
 
-- **Send:** drag files onto the menu bar icon, the Courier window, or a machine in the window's list. Or use **Send Clipboard** after copying a screenshot or files.
-- **Choose where it goes:** click a machine to select it. Click its folder to change it.
-- **After sending:** the path is on your clipboard, or already pasted if you use Rex.
-- **Settings** (the gear, or ⌘,): show Courier in the Dock or menu bar, open at login, and auto-paste.
+## Rex
 
-## With Rex
+If the machine runs [Rex](https://docs.superlogical.com), Courier pastes the path straight into your agent's terminal. Add the machine as a Rex host with the same name it has in Tailscale, and turn on Remote Control in Rex.app's settings. Courier pastes the path but never presses Return.
 
-Courier can paste the path into the terminal where your agent is running.
+## Problems
 
-1. Add the machine as a Rex host on your Mac, using the same name as in Tailscale.
-2. In Rex.app → Settings → Rex Server, turn on **Remote Control**. That lets Courier paste into the pane you're looking at.
-3. In Courier's settings, tick the agents you use.
+Most errors come from SSH. Run `ssh <machine> true` in Terminal and fix whatever it complains about. Courier logs to `~/Library/Logs/Courier.log`.
 
-Courier only pastes. It never presses Return.
-
-## If something goes wrong
-
-| Courier says | Try |
-|---|---|
-| Couldn't reach *machine* | Make sure it's online in Tailscale and `ssh <machine> true` works. |
-| *machine* turned down the SSH login | Turn on Tailscale SSH there, or add your SSH key. |
-| SSH doesn't trust *machine* yet | Run `ssh <machine>` once in Terminal and say yes. |
-| Nothing to send | Copy a file or an image first. |
-
-Logs are in `~/Library/Logs/Courier.log`.
-
-## More
-
-- **Command line:** `RIMG_HOST=<machine> rimg file.png` sends files without the app.
-- **Changing Courier:** see [`AGENTS.md`](AGENTS.md).
-- **Icons:** [Lucide](https://lucide.dev) (ISC) and Apple's SF Symbols.
+To change Courier, see [`AGENTS.md`](AGENTS.md). Icons are from [Lucide](https://lucide.dev).
